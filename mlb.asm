@@ -85,7 +85,7 @@ set_header_fields:
 	cld					; copy cmd_line
 	mov	si, cmd_line
 	mov	di, 0xe000
-	mov	cx, cmd_length
+	mov	cx, 0xfeca			; mlbinstall replaces this with the real len
 	rep	movsb
 
 read_protected_mode_kernel:
@@ -222,10 +222,6 @@ dap:
 	dd	0				; low bytes of LBA address
 	dd	0				; high bytes of LBA address
 
-current_lba	dd	7620608			; initialize to first LBA address
-cmd_line	db	'root=/dev/sda1', 0
-cmd_length	equ	$ - cmd_line
-error_msg	db	'err', 0		; /* FIXME: newline */
-
-;	times	510-($-$$)	db	0
-;	dw	0xaa55
+error_msg	db	'err', 0
+current_lba	dd	0xefbeadde		; mlbinstall replaces this with the kernel LBA
+cmd_line	db	0
