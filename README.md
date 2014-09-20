@@ -43,7 +43,7 @@ Installing
 
 To install MLB, simply invoke
 
-    mlbinstall <target> <kernel> <command line>
+    mlbinstall <target> <kernel> <command line> [-vbr]
 
 where:
 
@@ -54,6 +54,10 @@ where:
    pass `root=` as `mlbinstall` will not calculate the root device. Currently
    the command line cannot be longer than 40 characters (more just won't fit in
    the MBR).
+ - `[-vbr]` will make `mlbinstall` ignore the space for the partition table,
+   giving you more space for the command line. You can safely use it if you're
+   installing to a Volume Boot Record (partition) and not the Master Boot
+   Record, e.g. for using with another bootloader in multi-OS setups.
 
 `mlbinstall` is quite noisy if it detects any problems. Restore your MBR from
 backup, fix the problems, and try again. If it succeeds, it won't say anything.
