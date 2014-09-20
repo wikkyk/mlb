@@ -68,13 +68,6 @@ read_kernel_setup:
 	mov	cx, 0x1000
 	call	read_from_hdd
 
-check_version:
-
-	cmp	word [es:0x206], 0x204		; we need protocol version >= 2.04
-	jb	error
-	test	byte [es:0x211], 1
-	jz	error
-
 set_header_fields:
 
 	mov	byte [es:0x210], 0xe1		; set type_of_loader
@@ -149,6 +142,7 @@ read_from_hdd:
 	mov	si, dap
 	mov	dl, 0x80			; first hard disk
 	int	0x13
+	mov	al, 'R'
 	jc	error
 	pop	edx
 	ret
@@ -162,6 +156,7 @@ do_move:
 	mov	ah, 0x87
 	mov	si, gdt
 	int	0x15
+	mov	al, 'M'
 	jc	error
 	pop	es
 	pop	edx
@@ -169,24 +164,12 @@ do_move:
 
 error:
 
-	mov	si, error_msg
-
-msg_loop:
-
-	lodsb
-	and	al, al
-	jz	reboot
 	mov	ah, 0xe
-	mov	bx, 7
+	xor	bh, bh
 	int	0x10
-	jmp	short msg_loop
-
-reboot:
-
-	xor	ax, ax
-	int	0x16
-	int	0x19
-	jmp	0xf000:0xfff0			; BIOS reset code
+.hlt:
+	hlt
+	jmp	error.hlt
 
 ; Global Descriptor Table
 
@@ -223,6 +206,5 @@ dap:
 	dd	0				; low bytes of LBA address
 	dd	0				; high bytes of LBA address
 
-error_msg	db	'err', 0
 current_lba	dd	0xefbeadde		; mlbinstall replaces this with the kernel LBA
 cmd_line	db	0

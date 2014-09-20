@@ -19,12 +19,16 @@
  * along with mlbinstall. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#define _BSD_SOURCE
 #define _POSIX_C_SOURCE 200809L
 #define _XOPEN_SOURCE 500
 
 #include <stdint.h>
-#include <string.h>
+#include <sys/mman.h>
+#include <unistd.h>
 #include <err.h>
+#include <endian.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -32,11 +36,39 @@
 #include <linux/fiemap.h>
 #include <linux/fs.h>
 #include <sys/ioctl.h>
-#include <unistd.h>
 #include <stdbool.h>
 #include <stdio.h>
 
 #include "mlb_bin.h"
+
+/* Checks if the kernel boot protocol is supported */
+void check_version(const char *kernel)
+{
+	int fd = open(kernel, O_RDONLY);
+	if (fd == -1)
+		err(1, "Failed opening %s", kernel);
+
+	long ps = sysconf(_SC_PAGESIZE);
+	size_t mlength = (512 / ps + 1) * ps;
+	uint8_t *m = mmap(NULL, mlength, PROT_READ, MAP_PRIVATE, fd, 0);
+	if (m == MAP_FAILED)
+		err(1, "Failed mapping %s", kernel);
+
+	uint32_t header = *(uint32_t *)(m + 0x202);
+	uint16_t version = be16toh(*(uint16_t *)(m + 0x206));
+	uint8_t loadflags = m[0x211];
+
+	if (header != 0x53726448)
+		errx(1, "%s is missing a Linux kernel header", kernel);
+	if (version < 0x204)
+		errx(1, "Kernel too old, boot protocol version >= 0x204/\
+kernel version >= 2.6.14 required, but %s is 0x%x", kernel, version);
+	if (!(loadflags & 0x01))
+		errx(1, "Kernel needs to be loaded high");
+
+	munmap(m, mlength);
+	close(fd);
+}
 
 /* Returns the length of cmdline, including the terminating null. */
 uint16_t cmdlen(const char *cmdline, size_t mlblen, size_t mbrlen)
@@ -170,6 +202,8 @@ argument to not reserve space for a partition table and gain an extra\n\
 	const char *target = argv[1];
 	const char *kernel = argv[2];
 	const char *cmdline = argv[3];
+
+	check_version(kernel);
 
 	size_t mbr_len = vbr ? 510 : 446;
 	uint16_t cmdline_len = cmdlen(cmdline, mlb_bin_len, mbr_len);

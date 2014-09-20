@@ -52,15 +52,26 @@ where:
  - `<kernel>` is the kernel file to boot
  - `<command line>` is the command line to pass to the kernel - don't forget to
    pass `root=` as `mlbinstall` will not calculate the root device. Currently
-   the command line cannot be longer than 40 characters (more just won't fit in
-   the MBR).
+   the command line cannot be longer than 80 bytes (more just won't fit in the
+   MBR).
  - `[-vbr]` will make `mlbinstall` ignore the space for the partition table,
-   giving you more space for the command line. You can safely use it if you're
-   installing to a Volume Boot Record (partition) and not the Master Boot
-   Record, e.g. for using with another bootloader in multi-OS setups.
+   giving you 144 bytes for the command line. You can safely use it if you're
+   installing to a Volume Boot Record (partition), e.g. for using with another
+   bootloader in multi-OS setups.
 
 `mlbinstall` is quite noisy if it detects any problems. Restore your MBR from
 backup, fix the problems, and try again. If it succeeds, it won't say anything.
+
+Error codes
+-----------
+
+If MLB fails to boot your kernel, it will print a one-letter error code.
+Currently, there are two error codes:
+
+    Error What it means
+    ----- ----------------------------------------
+      R   Failed reading data from disk
+      M   Failed moving data to its final location
 
 Contact
 -------
