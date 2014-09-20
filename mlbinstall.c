@@ -33,6 +33,7 @@
 #include <linux/fs.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
+#include <stdbool.h>
 #include <stdio.h>
 
 #include "mlb_bin.h"
@@ -71,38 +72,38 @@ uint32_t lba(const char *fn)
 	 * Some messages from <linux/fiemap.h>.
 	 * TODO: Write better messages.
 	 */
-	int error = 0;
+	bool error = false;
 	if (!(fm->fm_extents[0].fe_flags & FIEMAP_EXTENT_LAST)) {
 		warnx("%s is fragmented", fn);
-		error = 1;
+		error = true;
 	}
 	if (fm->fm_extents[0].fe_flags & FIEMAP_EXTENT_UNKNOWN) {
 		warnx("%s: Data location unknown", fn);
-		error = 1;
+		error = true;
 	}
 	if (fm->fm_extents[0].fe_flags & FIEMAP_EXTENT_DELALLOC) {
 		warnx("%s: Location still pending", fn);
-		error = 1;
+		error = true;
 	}
 	if (fm->fm_extents[0].fe_flags & FIEMAP_EXTENT_ENCODED) {
 		warnx("%s: Data can not be read while fs is unmounted", fn);
-		error = 1;
+		error = true;
 	}
 	if (fm->fm_extents[0].fe_flags & FIEMAP_EXTENT_DATA_ENCRYPTED) {
 		warnx("%s: Data is encrypted by fs", fn);
-		error = 1;
+		error = true;
 	}
 	if (fm->fm_extents[0].fe_flags & FIEMAP_EXTENT_NOT_ALIGNED) {
 		warnx("%s: Extent offsets may not be block aligned", fn);
-		error = 1;
+		error = true;
 	}
 	if (fm->fm_extents[0].fe_flags & FIEMAP_EXTENT_UNWRITTEN) {
 		warnx("%s: Space allocated, but no data (i.e. zero)", fn);
-		error = 1;
+		error = true;
 	}
 	if (fm->fm_extents[0].fe_physical / 512 > ~0u) {
 		warnx("%s is further than 2 TB into the disk", fn);
-		error = 1;
+		error = true;
 	}
 	if (error)
 		errx(1, "%s is unbootable due to condition(s) above", fn);
