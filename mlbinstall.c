@@ -39,10 +39,10 @@
 #include "mlb_bin.h"
 
 /* Returns the length of cmdline, including the terminating null. */
-uint16_t cmdlen(const char *cmdline, unsigned mlblen)
+uint16_t cmdlen(const char *cmdline, size_t mlblen, size_t mbrlen)
 {
 	/* Note the last byte of mlb.bin is 0, reserved for cmdline. */
-	size_t maxlen = 447 - mlblen;
+	size_t maxlen = mbrlen - mlblen + 1;
 	size_t len = strnlen(cmdline, maxlen);
 	if (len == maxlen)
 		errx(1, "Command line too long, max length: %lu", maxlen);
@@ -155,20 +155,28 @@ void mbrwrite(const char *target, uint8_t *mbr)
 
 int main(int argc, char **argv)
 {
-	if (argc != 4)
-		errx(1, "Usage: %s <target> <kernel> <command line>\n\
+	/* Check for -vbr first to avoid calling strncmp twice */
+	bool vbr = false;
+	if (argc == 5 && !strncmp(argv[4], "-vbr", 5))
+		vbr = true;
+
+	if ((argc != 4 && argc != 5) || (argc == 5 && !vbr))
+		errx(1, "Usage: %s <target> <kernel> <command line> [-vbr]\n\
 Configures MLB to boot the kernel with the command line and installs it on\n\
-target (could be a file, a block device, ...).", argv[0]);
+target (could be a file, a block device, ...). Specify -vbr as the last\n\
+argument to not reserve space for a partition table and gain an extra\n\
+64 bytes for the command line.\n", argv[0]);
 
 	const char *target = argv[1];
 	const char *kernel = argv[2];
 	const char *cmdline = argv[3];
 
-	uint16_t cmdline_len = cmdlen(cmdline, mlb_bin_len);
+	size_t mbr_len = vbr ? 510 : 446;
+	uint16_t cmdline_len = cmdlen(cmdline, mlb_bin_len, mbr_len);
 	uint32_t kernel_lba = lba(kernel);
 
-	uint8_t mbr[446];
-	memset(mbr, 0, 446);
+	uint8_t mbr[510];
+	memset(mbr, 0, mbr_len);
 	mlbcopy(mbr, mlb_bin, mlb_bin_len);
 	lbacopy(mbr, mlb_bin_len, kernel_lba);
 	cmdcopy(mbr, mlb_bin_len, cmdline, cmdline_len);
